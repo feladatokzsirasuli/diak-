@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>Diák Pontszám Ellenőrzés</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f3f4f6; padding: 20px; text-align: center; }
+        .box { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input, button { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        button { background: #2563eb; color: white; border: none; cursor: pointer; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f9fafb; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+<div class="box">
+    <h2>Fizika Domino - Pontjaim 🎯</h2>
+    <div id="loginForm">
+        <input type="text" id="stuName" placeholder="Teljes neved (pl: Kovács Péter)">
+        <input type="password" id="stuPass" placeholder="Jelszó">
+        <button id="loginBtn">Belépés</button>
+    </div>
+    <div id="resultArea" style="display:none;">
+        <h3 id="welcomeMsg"></h3>
+        <h1 id="balanceMsg" style="color:#0284c7;">0 pont</h1>
+        <p id="spentMsg" style="color:#6b7280; font-size: 14px;"></p>
+        <h4>Pontjaid részletezése:</h4>
+        <table>
+            <thead><tr><th>Játék / Feladattípus</th><th>Elért pontszám</th></tr></thead>
+            <tbody id="scoreTable"></tbody>
+        </table>
+        <button onclick="window.location.reload()" style="background:#6b7280; margin-top:20px;">Kijelentkezés</button>
+    </div>
+</div>
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4ypKsFziwbyOQ87Sb-1PrrIZcvLf1_xQ",
+      authDomain: "://firebaseapp.com",
+      databaseURL: "https://fizikadomino-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "fizikadomino",
+      storageBucket: "fizikadomino.firebasestorage.app",
+      messagingSenderId: "272119065201",
+      appId: "1:272119065201:web:c6bdc223fd9a61394f49d0",
+      measurementId: "G-6PNNLQV1GH"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    document.getElementById('loginBtn').addEventListener('click', () => {
+        const inputName = document.getElementById('stuName').value.trim();
+        const inputPass = document.getElementById('stuPass').value;
+
+        if (inputPass !== "Qqriq") {
+            alert("Hibás jelszó!");
+            return;
+        }
+        if (!inputName) {
+            alert("Kérlek, add meg a neved!");
+            return;
+        }
+
+        database.ref('/').once('value').then((snapshot) => {
+            const data = snapshot.val() || {};
+            let legjobbPontok = {};
+            let szorgalmiOsszes = 0;
+            let tanariOsszes = 0;
+            let levontPont = 0;
+            let talaltTanulo = false;
+
+            const keresettNev = inputName.toLowerCase();
+
+            for (let mappa in data) {
+                if (!data.hasOwnProperty(mappa)) continue;
+                const tartalom = data[mappa];
+
+                if (mappa === 'bevaltasok') {
+                    for (let k in tartalom) {
+                        if (tartalom[k] && tartalom[k].name && tartalom[k].name.toLowerCase() === keresettNev) {
+                            levontPont += Number(tartalom[k].cost || 0);
+                            talaltTanulo = true;
+                        }
+                    }
+                } else if (mappa === 'tanari_pontok') {
+                    for (let k in tartalom) {
+                        if (tartalom[k] && tartalom[k].name && tartalom[k].name.toLowerCase() === keresettNev) {
+                            tanariOsszes += Number(tartalom[k].score || tartalom[k].pontszam || 0);
+                            talaltTanulo = true;
+                        }
+                    }
+                } else if (mappa === 'Szorgalmi') {
+                    for (let k in tartalom) {
+                        if (tartalom[k] && tartalom[k].name && tartalom[k].name.toLowerCase() === keresettNev) {
+                            szorgalmiOsszes += Number(tartalom[k].score || tartalom[k].pontszam || 0);
+                            talaltTanulo = true;
+                        }
+                    }
+                } else {
+                    // Normál játékok: csak a legmagasabb pont játékonként
+                    for (let k in tartalom) {
+                        if (tartalom[k] && tartalom[k].name && tartalom[k].name.toLowerCase() === keresettNev) {
+                            const p = Number(tartalom[k].score || tartalom[k].pontszam || 0);
+                            const eddigi = legjobbPontok[mappa] || 0;
+                            if (p > eddigi) { legjobbPontok[mappa] = p; }
+                            talaltTanulo = true;
+                        }
+                    }
+                }
+            }
+
+            if (!talaltTanulo) {
+                alert("Nem találtam ilyen nevű tanulót az adatbázisban!");
+                return;
+            }
+
+            let jatekPontokSum = 0;
+            const tableBody = document.getElementById('scoreTable');
+            tableBody.innerHTML = '';
+
+            // 1. Táblázatba tesszük a normál játékok rekordjait
+            for (let jatek in legjobbPontok) {
+                jatekPontokSum += legjobbPontok[jatek];
+                tableBody.innerHTML += `<tr><td>${jatek} (Játék rekord)</td><td><strong>+ ${legjobbPontok[jatek]} pont</strong></td></tr>`;
+            }
+
+            // 2. Táblázatba tesszük az összesített szorgalmit (ha van)
+            if (szorgalmiOsszes > 0) {
+                tableBody.innerHTML += `<tr style="background:#f0fdf4;"><td><strong>Szorgalmi feladatok (Mind beszámítva)</strong></td><td><strong style="color:#16a34a;">+ ${szorgalmiOsszes} pont</strong></td></tr>`;
+            }
+
+            // 3. Táblázatba tesszük a tanári módosításokat (ha van)
+            if (tanariOsszes !== 0) {
+                const szin = tanariOsszes > 0 ? '#2563eb' : '#dc2626';
+                const elojel = tanariOsszes > 0 ? '+ ' : '';
+                tableBody.innerHTML += `<tr style="background:#f8fafc;"><td><strong>Tanári pontmódosítások</strong></td><td><strong style="color:${szin};">${elojel}${tanariOsszes} pont</strong></td></tr>`;
+            }
+
+            // VÉGSŐ EGYENLEG KÉPLET: Játékok rekordjai + Összes szorgalmi + Tanári pontok - Beváltások
+            const osszesSzerzett = jatekPontokSum + szorgalmiOsszes;
+            const vegsoEgyenleg = osszesSzerzett + tanariOsszes - levontPont;
+
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('resultArea').style.display = 'block';
+            document.getElementById('welcomeMsg').textContent = `Szia ${inputName}!`;
+            document.getElementById('balanceMsg').textContent = `${vegsoEgyenleg} pont`;
+            document.getElementById('spentMsg').innerHTML = `Összes szerzett játék/szorgalmi pont: <strong>${osszesSzerzett}</strong><br>Tanári egyenleg: <strong>${tanariOsszes >= 0 ? '+' : ''}${tanariOsszes}</strong> | Beváltva: <strong>-${levontPont}</strong>`;
+        });
+    });
+</script>
+</body>
+</html>
