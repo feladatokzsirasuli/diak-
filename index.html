@@ -46,6 +46,7 @@
       appId: "1:272119065201:web:c6bdc223fd9a61394f49d0",
       measurementId: "G-6PNNLQV1GH"
     };
+    
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
@@ -84,6 +85,7 @@
                         }
                     }
                 } else if (mappa === 'tanari_pontok') {
+                    // Itt gyűjtjük össze a tanári pontokat
                     for (let k in tartalom) {
                         if (tartalom[k] && tartalom[k].name && tartalom[k].name.toLowerCase() === keresettNev) {
                             tanariOsszes += Number(tartalom[k].score || tartalom[k].pontszam || 0);
@@ -91,6 +93,7 @@
                         }
                     }
                 } else if (mappa === 'Szorgalmi') {
+                    // Itt adjuk össze a szorgalmi feladatok pontjait (Nagy kezdőbetűvel)
                     for (let k in tartalom) {
                         if (tartalom[k] && tartalom[k].name && tartalom[k].name.toLowerCase() === keresettNev) {
                             szorgalmiOsszes += Number(tartalom[k].score || tartalom[k].pontszam || 0);
@@ -119,25 +122,25 @@
             const tableBody = document.getElementById('scoreTable');
             tableBody.innerHTML = '';
 
-            // 1. Táblázatba tesszük a normál játékok rekordjait
+            // 1. A normál játékok rekordjainak kilistázása
             for (let jatek in legjobbPontok) {
                 jatekPontokSum += legjobbPontok[jatek];
                 tableBody.innerHTML += `<tr><td>${jatek} (Játék rekord)</td><td><strong>+ ${legjobbPontok[jatek]} pont</strong></td></tr>`;
             }
 
-            // 2. Táblázatba tesszük az összesített szorgalmit (ha van)
+            // 2. A Szorgalmi feladatok pontjainak megjelenítése külön sorban
             if (szorgalmiOsszes > 0) {
-                tableBody.innerHTML += `<tr style="background:#f0fdf4;"><td><strong>Szorgalmi feladatok (Mind beszámítva)</strong></td><td><strong style="color:#16a34a;">+ ${szorgalmiOsszes} pont</strong></td></tr>`;
+                tableBody.innerHTML += `<tr style="background:#f0fdf4;"><td><strong>Szorgalmi feladatok (Összesen)</strong></td><td><strong style="color:#16a34a;">+ ${szorgalmiOsszes} pont</strong></td></tr>`;
             }
 
-            // 3. Táblázatba tesszük a tanári módosításokat (ha van)
+            // 3. A Tanári pontmódosítások megjelenítése külön tételként (sorban)
             if (tanariOsszes !== 0) {
                 const szin = tanariOsszes > 0 ? '#2563eb' : '#dc2626';
                 const elojel = tanariOsszes > 0 ? '+ ' : '';
-                tableBody.innerHTML += `<tr style="background:#f8fafc;"><td><strong>Tanári pontmódosítások</strong></td><td><strong style="color:${szin};">${elojel}${tanariOsszes} pont</strong></td></tr>`;
+                tableBody.innerHTML += `<tr style="background:#eff6ff;"><td><strong>Tanári pontmódosítások (Magatartás/Felelet)</strong></td><td><strong style="color:${szin};">${elojel}${tanariOsszes} pont</strong></td></tr>`;
             }
 
-            // VÉGSŐ EGYENLEG KÉPLET: Játékok rekordjai + Összes szorgalmi + Tanári pontok - Beváltások
+            // Végső egyenleg kiszámítása
             const osszesSzerzett = jatekPontokSum + szorgalmiOsszes;
             const vegsoEgyenleg = osszesSzerzett + tanariOsszes - levontPont;
 
